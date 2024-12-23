@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu des Acteurs Mélangés</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+
+        .image-container {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        .solved {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            animation: solved-animation 0.5s ease-in-out;
+        }
+
+        @keyframes solved-animation {
+            from {
+                transform: scale(1.05);
+                box-shadow: 0 0 15px rgba(40, 167, 69, 0.6);
+            }
+
+            to {
+                transform: scale(1);
+                box-shadow: none;
+            }
+        }
+
+        img {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+
+        input {
+            width: calc(100% - 20px);
+            margin: 10px 5px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        input:disabled {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background-color: #6c757d;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        p {
+            margin: 10px 0;
+        }
+
+        #success-message {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            background-color: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Énigme 4/4</h1>
+    <p>Regardez chaque image et trouvez les deux acteurs présents dans le montage. Pour valider la réponse il faut écrir
+        le nom complet de l'acteur:</p>
+
+    <div id="image-list"></div>
+
+    <!-- Message de succès -->
+    <div id="success-message">
+        <h2>Félicitations ! 🎉</h2>
+        <p>Vous avez résolu toutes les images. Votre nouvel indice est:</p>
+        <p style="font-size: 24px; font-weight: bold;">L'aristocrate aime le charleston et son chiffre préféré est le
+            plus petit des chiffres recherchés.</p>
+    </div>
+
+    <script>
+        const images = [
+            { id: 1, fichier: "image1.jpg", reponses: ["Brad Pitt", "Leonardo Dicaprio"] },
+            { id: 2, fichier: "image2.jpg", reponses: ["Billie Eilish", "Cara Delevingne"] },
+            { id: 3, fichier: "image3.jpg", reponses: ["Jason Momoa", "Chris Hemsworth"] },
+            { id: 4, fichier: "image4.jpg", reponses: ["Lady Gaga", "Scarlett Johansson"] },
+            { id: 5, fichier: "image5.jpg", reponses: ["Antoine Griezmann", "Leo Messi"] },
+            { id: 6, fichier: "image6.jpg", reponses: ["Jessica Alba", "Ariana Grande"] },
+            { id: 7, fichier: "image7.jpg", reponses: ["Keanu Reeves", "Johnny Depp"] },
+            { id: 8, fichier: "image8.jpg", reponses: ["Zendaya", "Zoe Kravitz"] },
+            { id: 9, fichier: "image9.jpg", reponses: ["Tom Holland", "Timothée Chalamet"] },
+            { id: 10, fichier: "image10.jpg", reponses: ["Emma Stone", "Mila Kunis"] }
+        ];
+
+        let solvedCount = 0;
+
+        function initImages() {
+            const imageList = document.getElementById('image-list');
+            images.forEach((image) => {
+                const container = document.createElement('div');
+                container.id = `image-${image.id}`;
+                container.className = 'image-container';
+
+                const img = document.createElement('img');
+                img.src = image.fichier;
+                img.alt = `Image ${image.id}`;
+
+                container.appendChild(img);
+
+                for (let i = 0; i < 2; i++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.placeholder = `Acteur ${i + 1}`;
+                    input.id = `input-${image.id}-${i + 1}`;
+                    container.appendChild(input);
+                }
+
+                const button = document.createElement('button');
+                button.innerText = 'Valider';
+                button.onclick = () => verifierReponses(image.id);
+
+                const feedback = document.createElement('p');
+                feedback.id = `feedback-${image.id}`;
+
+                container.appendChild(button);
+                container.appendChild(feedback);
+
+                imageList.appendChild(container);
+            });
+        }
+
+        function verifierReponses(id) {
+            const image = images.find((img) => img.id === id);
+            const feedback = document.getElementById(`feedback-${id}`);
+            const container = document.getElementById(`image-${id}`);
+            let allCorrect = true;
+
+            if (!image.reponsesValidees) {
+                image.reponsesValidees = [];
+            }
+
+            for (let i = 0; i < 2; i++) {
+                const input = document.getElementById(`input-${id}-${i + 1}`);
+                const userValue = input.value.trim();
+
+                let found = false;
+                for (let j = 0; j < image.reponses.length; j++) {
+                    const reponse = image.reponses[j];
+                    const similariteScore = similarite(userValue, reponse);
+
+                    if (similariteScore >= 70 && !image.reponsesValidees.includes(reponse)) {
+                        image.reponsesValidees.push(reponse);
+                        input.value = `${reponse} ✅`;
+                        input.disabled = true;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    allCorrect = false;
+                }
+            }
+
+            if (image.reponsesValidees.length === image.reponses.length) {
+                if (!container.classList.contains('solved')) {
+                    solvedCount++;
+                }
+                feedback.innerText = 'Bonne réponse pour les deux acteurs !';
+                feedback.style.color = 'green';
+                container.classList.add('solved');
+
+                if (solvedCount === images.length) {
+                    afficherMessageDeSucces();
+                }
+            } else {
+                feedback.innerText = 'Certains noms sont incorrects, essayez encore.';
+                feedback.style.color = 'red';
+            }
+        }
+
+        function afficherMessageDeSucces() {
+            const successMessage = document.getElementById('success-message');
+            successMessage.style.display = 'block';
+        }
+
+        function similarite(str1, str2) {
+            const distance = levenshtein(str1.toLowerCase(), str2.toLowerCase());
+            const longueurMax = Math.max(str1.length, str2.length);
+            return (1 - distance / longueurMax) * 100;
+        }
+
+        function levenshtein(a, b) {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) {
+                matrix[i] = [i];
+            }
+            for (let j = 0; j <= a.length; j++) {
+                matrix[0][j] = j;
+            }
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        window.onload = initImages;
+    </script>
+</body>
+
+</html>
